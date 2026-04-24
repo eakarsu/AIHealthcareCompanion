@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  password        String
+  name            String
+  role            String   @default("user")
+  emailVerified   Boolean  @default(false)
+  verifyToken     String?
+  resetToken      String?
+  resetTokenExpiry DateTime?
+  darkMode        Boolean  @default(false)
+  language        String   @default("en")
+  onboardingDone  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  medications      Medication[]
+  physicalTherapy  PhysicalTherapy[]
+  skinScans        SkinScan[]
+  visionTests      VisionTest[]
+  medicalHistories MedicalHistory[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  feedbacks        Feedback[]
+}
+
+model Medication {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  name            String
+  dosage          String
+  frequency       String
+  timeOfDay       String
+  startDate       DateTime
+  endDate         DateTime?
+  purpose         String
+  sideEffects     String?
+  interactions    String?
+  notes           String?
+  isActive        Boolean  @default(true)
+  aiAnalysis      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PhysicalTherapy {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  exerciseName    String
+  bodyPart        String
+  description     String
+  duration        Int
+  repetitions     Int
+  sets            Int
+  difficulty      String
+  videoUrl        String?
+  instructions    String
+  precautions     String?
+  aiFormFeedback  String?
+  status          String   @default("pending")
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SkinScan {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  imageUrl        String?
+  bodyLocation    String
+  symptomDescription String
+  duration        String
+  severity        String
+  aiDiagnosis     String?
+  recommendations String?
+  riskLevel       String?
+  followUpNeeded  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VisionTest {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  testType        String
+  leftEyeResult   String?
+  rightEyeResult  String?
+  colorVision     String?
+  contrastSensitivity String?
+  nearVision      String?
+  distanceVision  String?
+  aiAnalysis      String?
+  recommendations String?
+  testDate        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MedicalHistory {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  condition       String
+  diagnosisDate   DateTime
+  status          String
+  treatingDoctor  String?
+  hospital        String?
+  medications     String?
+  surgeries       String?
+  allergies       String?
+  familyHistory   String?
+  notes           String?
+  aiInsights      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  type        String
+  title       String
+  message     String
+  read        Boolean  @default(false)
+  actionUrl   String?
+  scheduledAt DateTime?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  action     String
+  resource   String
+  resourceId String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  type      String
+  subject   String
+  message   String
+  status    String   @default("open")
+  response  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+}
