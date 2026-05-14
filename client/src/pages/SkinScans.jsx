@@ -18,7 +18,11 @@ export default function SkinScans() {
   const [isEditing, setIsEditing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState(null);
+  const [aiStructured, setAiStructured] = useState(null);
   const [aiError, setAiError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const LIMIT = 20;
 
   const [formData, setFormData] = useState({
     bodyLocation: '',
@@ -29,13 +33,14 @@ export default function SkinScans() {
   });
 
   useEffect(() => {
-    fetchScans();
-  }, []);
+    fetchScans(page);
+  }, [page]);
 
-  const fetchScans = async () => {
+  const fetchScans = async (p = 1) => {
     try {
-      const response = await api.get('/skin-scans');
-      setScans(response.data);
+      const response = await api.get('/skin-scans', { params: { page: p, limit: LIMIT } });
+      setScans(response.data.data || response.data);
+      if (response.data.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching scans:', error);
     } finally {
@@ -46,6 +51,7 @@ export default function SkinScans() {
   const handleRowClick = (scan) => {
     setSelectedScan(scan);
     setAiResponse(scan.aiDiagnosis || null);
+    setAiStructured(null);
     setAiError(null);
     setShowDetailModal(true);
   };
@@ -108,10 +114,13 @@ export default function SkinScans() {
         try {
           const aiRes = await api.post(`/skin-scans/${newScan.id}/analyze`);
           setAiResponse(aiRes.data.analysis);
+          setAiStructured(aiRes.data.structured || null);
           setSelectedScan(aiRes.data.record);
           setScans(prev => prev.map(s => s.id === newScan.id ? aiRes.data.record : s));
         } catch (aiErr) {
-          setAiError(aiErr.response?.data?.error || 'Failed to analyze skin condition');
+          const status = aiErr.response?.status;
+          const errMsg = status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (aiErr.response?.data?.error || 'Failed to analyze skin condition');
+          setAiError(errMsg);
         } finally {
           setAiLoading(false);
         }
@@ -127,10 +136,13 @@ export default function SkinScans() {
     try {
       const response = await api.post(`/skin-scans/${selectedScan.id}/analyze`);
       setAiResponse(response.data.analysis);
+      setAiStructured(response.data.structured || null);
       setSelectedScan(response.data.record);
       setScans(prev => prev.map(s => s.id === selectedScan.id ? response.data.record : s));
     } catch (error) {
-      setAiError(error.response?.data?.error || 'Failed to analyze skin condition');
+      const status = error.response?.status;
+      const errMsg = status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (error.response?.data?.error || 'Failed to analyze skin condition');
+      setAiError(errMsg);
     } finally {
       setAiLoading(false);
     }
@@ -281,6 +293,27 @@ export default function SkinScans() {
         )}
       </div>
 
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600">Page {page} of {pagination.totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+            disabled={page === pagination.totalPages}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
       {/* Detail Modal */}
       <Modal
         isOpen={showDetailModal}
@@ -360,7 +393,101 @@ export default function SkinScans() {
               </button>
             </div>
 
-            {/* AI Response */}
+            {/* Structured ABCDE Result Display */}
+            {aiStructured && !aiLoading && (
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  AI Vision Analysis Results
+                </h4>
+
+                {/* Urgency + Risk badges */}
+                <div className="flex flex-wrap gap-3">
+                  {aiStructured.urgency_tier && (
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${
+                      aiStructured.urgency_tier === 'emergency' ? 'bg-red-100 text-red-700 border-red-300' :
+                      aiStructured.urgency_tier === 'urgent' ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                      'bg-green-100 text-green-700 border-green-300'
+                    }`}>
+                      Urgency: {aiStructured.urgency_tier}
+                    </span>
+                  )}
+                  {aiStructured.risk_level && (
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getRiskColor(aiStructured.risk_level)}`}>
+                      Risk: {aiStructured.risk_level}
+                    </span>
+                  )}
+                  {aiStructured.lesion_type && (
+                    <span className="px-3 py-1 rounded-full text-sm font-semibold border bg-purple-100 text-purple-700 border-purple-300">
+                      {aiStructured.lesion_type}
+                    </span>
+                  )}
+                </div>
+
+                {/* ABCDE Score */}
+                {aiStructured.abcde_score && (
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-3">ABCDE Dermoscopy Score</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        { key: 'asymmetry', label: 'Asymmetry', max: 5 },
+                        { key: 'border', label: 'Border', max: 5 },
+                        { key: 'color', label: 'Color', max: 5 },
+                      ].map(({ key, label, max }) => {
+                        const val = aiStructured.abcde_score[key] || 0;
+                        const pct = (val / max) * 100;
+                        return (
+                          <div key={key}>
+                            <div className="flex justify-between text-xs text-gray-600 mb-1">
+                              <span>{label}</span>
+                              <span>{val}/{max}</span>
+                            </div>
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${pct >= 70 ? 'bg-red-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Diameter Estimate</p>
+                        <p className="text-sm font-medium text-gray-800">{aiStructured.abcde_score.diameter_estimate || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Evolution Unknown</p>
+                        <p className="text-sm font-medium text-gray-800">{aiStructured.abcde_score.evolution_unknown ? 'Yes' : 'No'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {aiStructured.recommendations?.length > 0 && (
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                    <p className="text-sm font-semibold text-blue-800 mb-2">Recommendations</p>
+                    <ul className="space-y-1">
+                      {aiStructured.recommendations.map((rec, i) => (
+                        <li key={i} className="text-sm text-blue-700 flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Disclaimer */}
+                <div className="bg-amber-50 rounded-xl p-3 border border-amber-200">
+                  <p className="text-xs text-amber-800">
+                    <strong>Disclaimer:</strong> {aiStructured.disclaimer || 'This AI analysis is for informational purposes only and is not a medical diagnosis. Always consult a qualified dermatologist for proper evaluation and treatment.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* AI Response (text) */}
             <AIResponseDisplay
               response={aiResponse}
               loading={aiLoading}

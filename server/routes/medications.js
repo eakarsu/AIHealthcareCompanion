@@ -1,18 +1,33 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { callOpenRouterAI, AI_PROMPTS } from '../services/openRouterAI.js';
+import { callOpenRouterAI, parseStructuredResponse, AI_PROMPTS } from '../services/openRouterAI.js';
+import { getCached, setCached } from '../services/analysisCache.js';
+import { aiRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Get all medications for user
+// Get all medications for user (with pagination)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const medications = await prisma.medication.findMany({
-      where: { userId: req.user.id },
-      orderBy: { createdAt: 'desc' }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const [medications, total] = await Promise.all([
+      prisma.medication.findMany({
+        where: { userId: req.user.id },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.medication.count({ where: { userId: req.user.id } })
+    ]);
+
+    res.json({
+      data: medications,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     });
-    res.json(medications);
   } catch (error) {
     console.error('Get medications error:', error);
     res.status(500).json({ error: 'Failed to fetch medications' });
@@ -33,6 +48,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
     console.error('Get medication error:', error);
     res.status(500).json({ error: 'Failed to fetch medication' });
   }
+});
+
+// Get cached analysis result
+router.get('/:id/analysis/cached', authenticateToken, async (req, res) => {
+  const cached = getCached('medication', req.params.id);
+  if (cached) {
+    return res.json({ cached: true, ...cached });
+  }
+  res.json({ cached: false });
 });
 
 // Create medication
@@ -88,7 +112,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 // AI Analysis - Check drug interactions
-router.post('/:id/analyze', authenticateToken, async (req, res) => {
+router.post('/:id/analyze', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const medication = await prisma.medication.findFirst({
       where: { id: parseInt(req.params.id), userId: req.user.id }
@@ -103,9 +127,18 @@ router.post('/:id/analyze', authenticateToken, async (req, res) => {
       where: { userId: req.user.id, isActive: true }
     });
 
+    // Get patient's medical history for condition-aware analysis
+    const medicalHistory = await prisma.medicalHistory.findMany({
+      where: { userId: req.user.id }
+    });
+
     const medicationList = allMedications.map(m =>
       `${m.name} (${m.dosage}, ${m.frequency})`
     ).join(', ');
+
+    const conditionList = medicalHistory.length > 0
+      ? medicalHistory.map(h => `${h.condition} (${h.status})`).join(', ')
+      : 'None on file';
 
     const userMessage = `
 Current medication to analyze: ${medication.name}
@@ -114,9 +147,10 @@ Frequency: ${medication.frequency}
 Purpose: ${medication.purpose}
 Current side effects reported: ${medication.sideEffects || 'None reported'}
 
+Patient conditions: ${conditionList}
 Other medications the patient is taking: ${medicationList}
 
-Please analyze this medication and check for potential interactions with the other medications.
+Please analyze this medication and check for potential interactions with the other medications, and note any contraindications for the patient's specific conditions.
 `;
 
     const aiResponse = await callOpenRouterAI(AI_PROMPTS.medicationInteraction, userMessage);
@@ -125,26 +159,33 @@ Please analyze this medication and check for potential interactions with the oth
       return res.status(500).json({ error: aiResponse.error });
     }
 
+    const structured = parseStructuredResponse(aiResponse.content);
+
     // Save AI analysis to medication
     const updated = await prisma.medication.update({
       where: { id: medication.id },
       data: { aiAnalysis: aiResponse.content }
     });
 
-    res.json({
+    const result = {
       record: updated,
       analysis: aiResponse.content,
+      structured,
+      rawResponse: aiResponse.content,
       model: aiResponse.model,
       usage: aiResponse.usage
-    });
+    };
+
+    setCached('medication', req.params.id, result);
+    res.json(result);
   } catch (error) {
     console.error('AI Analysis error:', error);
     res.status(500).json({ error: 'Failed to analyze medication' });
   }
 });
 
-// Analyze all medications for interactions
-router.post('/analyze-all', authenticateToken, async (req, res) => {
+// Analyze all medications for interactions (with medical history context)
+router.post('/analyze-all', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const medications = await prisma.medication.findMany({
       where: { userId: req.user.id, isActive: true }
@@ -154,16 +195,24 @@ router.post('/analyze-all', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'No active medications found' });
     }
 
+    // Inject medical history for condition-aware analysis
+    const medicalHistory = await prisma.medicalHistory.findMany({
+      where: { userId: req.user.id }
+    });
+
+    const conditionList = medicalHistory.length > 0
+      ? medicalHistory.map(h => `${h.condition} (${h.status})`).join(', ')
+      : 'None on file';
+
     const medicationDetails = medications.map(m =>
       `- ${m.name}: ${m.dosage}, ${m.frequency}, for ${m.purpose}`
     ).join('\n');
 
     const userMessage = `
-Please analyze the following medication regimen for potential interactions and safety concerns:
+Patient conditions: ${conditionList}
+Current medications: ${medicationDetails}
 
-${medicationDetails}
-
-Provide a comprehensive analysis of potential drug interactions, timing recommendations, and safety warnings.
+Analyze for interactions, contraindications for these specific conditions. Provide a comprehensive analysis of potential drug interactions, timing recommendations, and safety warnings specific to the patient's medical conditions.
 `;
 
     const aiResponse = await callOpenRouterAI(AI_PROMPTS.medicationInteraction, userMessage);
@@ -172,8 +221,12 @@ Provide a comprehensive analysis of potential drug interactions, timing recommen
       return res.status(500).json({ error: aiResponse.error });
     }
 
+    const structured = parseStructuredResponse(aiResponse.content);
+
     res.json({
       analysis: aiResponse.content,
+      structured,
+      rawResponse: aiResponse.content,
       model: aiResponse.model,
       usage: aiResponse.usage
     });

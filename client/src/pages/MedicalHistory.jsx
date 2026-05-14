@@ -18,6 +18,9 @@ export default function MedicalHistory() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState(null);
   const [aiError, setAiError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const LIMIT = 20;
 
   const [formData, setFormData] = useState({
     condition: '',
@@ -33,13 +36,14 @@ export default function MedicalHistory() {
   });
 
   useEffect(() => {
-    fetchRecords();
-  }, []);
+    fetchRecords(page);
+  }, [page]);
 
-  const fetchRecords = async () => {
+  const fetchRecords = async (p = 1) => {
     try {
-      const response = await api.get('/medical-history');
-      setRecords(response.data);
+      const response = await api.get('/medical-history', { params: { page: p, limit: LIMIT } });
+      setRecords(response.data.data || response.data);
+      if (response.data.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching records:', error);
     } finally {
@@ -125,7 +129,7 @@ export default function MedicalHistory() {
           setSelectedRecord(aiRes.data.record);
           setRecords(prev => prev.map(r => r.id === newRecord.id ? aiRes.data.record : r));
         } catch (aiErr) {
-          setAiError(aiErr.response?.data?.error || 'Failed to analyze medical history');
+          setAiError(aiErr.response?.status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (aiErr.response?.data?.error || 'Failed to analyze medical history'));
         } finally {
           setAiLoading(false);
         }
@@ -145,7 +149,7 @@ export default function MedicalHistory() {
       setSelectedRecord(response.data.record);
       setRecords(prev => prev.map(r => r.id === selectedRecord.id ? response.data.record : r));
     } catch (error) {
-      setAiError(error.response?.data?.error || 'Failed to analyze medical history');
+      setAiError(error.response?.status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (error.response?.data?.error || 'Failed to analyze medical history'));
     } finally {
       setAiLoading(false);
     }
@@ -299,6 +303,27 @@ export default function MedicalHistory() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600">Page {page} of {pagination.totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+            disabled={page === pagination.totalPages}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Detail Modal */}
       <Modal

@@ -1,18 +1,33 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { callOpenRouterAI, AI_PROMPTS } from '../services/openRouterAI.js';
+import { callOpenRouterAI, parseStructuredResponse, AI_PROMPTS } from '../services/openRouterAI.js';
+import { getCached, setCached } from '../services/analysisCache.js';
+import { aiRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Get all medical history for user
+// Get all medical history for user (with pagination)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const history = await prisma.medicalHistory.findMany({
-      where: { userId: req.user.id },
-      orderBy: { diagnosisDate: 'desc' }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const [history, total] = await Promise.all([
+      prisma.medicalHistory.findMany({
+        where: { userId: req.user.id },
+        orderBy: { diagnosisDate: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.medicalHistory.count({ where: { userId: req.user.id } })
+    ]);
+
+    res.json({
+      data: history,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     });
-    res.json(history);
   } catch (error) {
     console.error('Get medical history error:', error);
     res.status(500).json({ error: 'Failed to fetch medical history' });
@@ -33,6 +48,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
     console.error('Get medical history error:', error);
     res.status(500).json({ error: 'Failed to fetch medical history' });
   }
+});
+
+// Get cached analysis
+router.get('/:id/analysis/cached', authenticateToken, async (req, res) => {
+  const cached = getCached('medicalhistory', req.params.id);
+  if (cached) return res.json({ cached: true, ...cached });
+  res.json({ cached: false });
 });
 
 // Create medical history record
@@ -86,7 +108,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 // AI Medical History Analysis
-router.post('/:id/analyze', authenticateToken, async (req, res) => {
+router.post('/:id/analyze', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const record = await prisma.medicalHistory.findFirst({
       where: { id: parseInt(req.params.id), userId: req.user.id }
@@ -129,18 +151,25 @@ Please analyze this medical history and provide insights, potential risk factors
       return res.status(500).json({ error: aiResponse.error });
     }
 
+    const structured = parseStructuredResponse(aiResponse.content);
+
     // Save AI insights to record
     const updated = await prisma.medicalHistory.update({
       where: { id: record.id },
       data: { aiInsights: aiResponse.content }
     });
 
-    res.json({
+    const result = {
       record: updated,
       analysis: aiResponse.content,
+      structured,
+      rawResponse: aiResponse.content,
       model: aiResponse.model,
       usage: aiResponse.usage
-    });
+    };
+
+    setCached('medicalhistory', req.params.id, result);
+    res.json(result);
   } catch (error) {
     console.error('AI Medical History Analysis error:', error);
     res.status(500).json({ error: 'Failed to analyze medical history' });
@@ -148,7 +177,7 @@ Please analyze this medical history and provide insights, potential risk factors
 });
 
 // Analyze complete medical history
-router.post('/analyze-all', authenticateToken, async (req, res) => {
+router.post('/analyze-all', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const history = await prisma.medicalHistory.findMany({
       where: { userId: req.user.id }
@@ -182,8 +211,12 @@ Provide a holistic view of the patient's health, identify patterns, potential ri
       return res.status(500).json({ error: aiResponse.error });
     }
 
+    const structured = parseStructuredResponse(aiResponse.content);
+
     res.json({
       analysis: aiResponse.content,
+      structured,
+      rawResponse: aiResponse.content,
       model: aiResponse.model,
       usage: aiResponse.usage
     });

@@ -18,6 +18,9 @@ export default function Medications() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState(null);
   const [aiError, setAiError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const LIMIT = 20;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -33,13 +36,14 @@ export default function Medications() {
   });
 
   useEffect(() => {
-    fetchMedications();
-  }, []);
+    fetchMedications(page);
+  }, [page]);
 
-  const fetchMedications = async () => {
+  const fetchMedications = async (p = 1) => {
     try {
-      const response = await api.get('/medications');
-      setMedications(response.data);
+      const response = await api.get('/medications', { params: { page: p, limit: LIMIT } });
+      setMedications(response.data.data || response.data);
+      if (response.data.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching medications:', error);
     } finally {
@@ -125,7 +129,9 @@ export default function Medications() {
           setSelectedMed(aiRes.data.record);
           setMedications(prev => prev.map(m => m.id === newMed.id ? aiRes.data.record : m));
         } catch (aiErr) {
-          setAiError(aiErr.response?.data?.error || 'Failed to analyze medication');
+          const status = aiErr.response?.status;
+          const errMsg = status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (aiErr.response?.data?.error || 'Failed to analyze medication');
+          setAiError(errMsg);
         } finally {
           setAiLoading(false);
         }
@@ -144,7 +150,9 @@ export default function Medications() {
       setSelectedMed(response.data.record);
       setMedications(prev => prev.map(m => m.id === selectedMed.id ? response.data.record : m));
     } catch (error) {
-      setAiError(error.response?.data?.error || 'Failed to analyze medication');
+      const status = error.response?.status;
+      const errMsg = status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (error.response?.data?.error || 'Failed to analyze medication');
+      setAiError(errMsg);
     } finally {
       setAiLoading(false);
     }
@@ -268,6 +276,27 @@ export default function Medications() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600">Page {page} of {pagination.totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+            disabled={page === pagination.totalPages}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Detail Modal */}
       <Modal

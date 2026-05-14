@@ -1,18 +1,33 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { callOpenRouterAI, AI_PROMPTS } from '../services/openRouterAI.js';
+import { callOpenRouterAI, parseStructuredResponse, AI_PROMPTS } from '../services/openRouterAI.js';
+import { getCached, setCached } from '../services/analysisCache.js';
+import { aiRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Get all exercises for user
+// Get all exercises for user (with pagination)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const exercises = await prisma.physicalTherapy.findMany({
-      where: { userId: req.user.id },
-      orderBy: { createdAt: 'desc' }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const [exercises, total] = await Promise.all([
+      prisma.physicalTherapy.findMany({
+        where: { userId: req.user.id },
+        orderBy: { createdAt: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.physicalTherapy.count({ where: { userId: req.user.id } })
+    ]);
+
+    res.json({
+      data: exercises,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     });
-    res.json(exercises);
   } catch (error) {
     console.error('Get exercises error:', error);
     res.status(500).json({ error: 'Failed to fetch exercises' });
@@ -33,6 +48,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
     console.error('Get exercise error:', error);
     res.status(500).json({ error: 'Failed to fetch exercise' });
   }
+});
+
+// Get cached analysis
+router.get('/:id/analysis/cached', authenticateToken, async (req, res) => {
+  const cached = getCached('physicaltherapy', req.params.id);
+  if (cached) return res.json({ cached: true, ...cached });
+  res.json({ cached: false });
 });
 
 // Create exercise
@@ -107,7 +129,7 @@ router.post('/:id/complete', authenticateToken, async (req, res) => {
 });
 
 // AI Form Analysis
-router.post('/:id/analyze-form', authenticateToken, async (req, res) => {
+router.post('/:id/analyze-form', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const exercise = await prisma.physicalTherapy.findFirst({
       where: { id: parseInt(req.params.id), userId: req.user.id }
@@ -141,18 +163,25 @@ Please provide detailed guidance on proper form, common mistakes to avoid, and h
       return res.status(500).json({ error: aiResponse.error });
     }
 
+    const structured = parseStructuredResponse(aiResponse.content);
+
     // Save AI feedback to exercise
     const updated = await prisma.physicalTherapy.update({
       where: { id: exercise.id },
       data: { aiFormFeedback: aiResponse.content }
     });
 
-    res.json({
+    const result = {
       record: updated,
       analysis: aiResponse.content,
+      structured,
+      rawResponse: aiResponse.content,
       model: aiResponse.model,
       usage: aiResponse.usage
-    });
+    };
+
+    setCached('physicaltherapy', req.params.id, result);
+    res.json(result);
   } catch (error) {
     console.error('AI Form Analysis error:', error);
     res.status(500).json({ error: 'Failed to analyze form' });

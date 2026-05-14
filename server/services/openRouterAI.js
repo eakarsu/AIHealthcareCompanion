@@ -16,7 +16,7 @@ export async function callOpenRouterAI(systemPrompt, userMessage) {
         'X-Title': 'AI Healthcare Companion'
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL || 'anthropic/claude-haiku-4.5',
+        model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
@@ -41,6 +41,61 @@ export async function callOpenRouterAI(systemPrompt, userMessage) {
   } catch (error) {
     console.error('OpenRouter AI Error:', error);
     return { error: error.message };
+  }
+}
+
+// Vision-capable call for skin scan images
+export async function callOpenRouterVision(base64Data, mediaType, textPrompt) {
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'http://localhost:3001',
+        'X-Title': 'AI Healthcare Companion'
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3-5-sonnet-20241022',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64Data } },
+              { type: 'text', text: textPrompt }
+            ]
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 10000
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error('OpenRouter Vision API Error:', data.error);
+      return { error: data.error.message || 'AI vision service error' };
+    }
+
+    return {
+      content: data.choices?.[0]?.message?.content || 'No response generated',
+      model: data.model,
+      usage: data.usage
+    };
+  } catch (error) {
+    console.error('OpenRouter Vision AI Error:', error);
+    return { error: error.message };
+  }
+}
+
+// Helper: parse JSON from AI response, stripping markdown fences
+export function parseStructuredResponse(content) {
+  try {
+    const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch {
+    return null;
   }
 }
 

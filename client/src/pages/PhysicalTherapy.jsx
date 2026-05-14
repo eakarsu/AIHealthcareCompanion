@@ -19,6 +19,9 @@ export default function PhysicalTherapy() {
   const [aiResponse, setAiResponse] = useState(null);
   const [aiError, setAiError] = useState(null);
   const [userDescription, setUserDescription] = useState('');
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const LIMIT = 20;
 
   const [formData, setFormData] = useState({
     exerciseName: '',
@@ -34,13 +37,14 @@ export default function PhysicalTherapy() {
   });
 
   useEffect(() => {
-    fetchExercises();
-  }, []);
+    fetchExercises(page);
+  }, [page]);
 
-  const fetchExercises = async () => {
+  const fetchExercises = async (p = 1) => {
     try {
-      const response = await api.get('/physical-therapy');
-      setExercises(response.data);
+      const response = await api.get('/physical-therapy', { params: { page: p, limit: LIMIT } });
+      setExercises(response.data.data || response.data);
+      if (response.data.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching exercises:', error);
     } finally {
@@ -138,7 +142,8 @@ export default function PhysicalTherapy() {
           setSelectedExercise(aiRes.data.record);
           setExercises(prev => prev.map(e => e.id === newExercise.id ? aiRes.data.record : e));
         } catch (aiErr) {
-          setAiError(aiErr.response?.data?.error || 'Failed to analyze exercise');
+          const status = aiErr.response?.status;
+          setAiError(status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (aiErr.response?.data?.error || 'Failed to analyze exercise'));
         } finally {
           setAiLoading(false);
         }
@@ -159,7 +164,8 @@ export default function PhysicalTherapy() {
       setSelectedExercise(response.data.record);
       setExercises(prev => prev.map(e => e.id === selectedExercise.id ? response.data.record : e));
     } catch (error) {
-      setAiError(error.response?.data?.error || 'Failed to analyze form');
+      const status = error.response?.status;
+      setAiError(status === 429 ? 'AI rate limit reached. Please wait before making more analysis requests.' : (error.response?.data?.error || 'Failed to analyze form'));
     } finally {
       setAiLoading(false);
     }
@@ -277,6 +283,27 @@ export default function PhysicalTherapy() {
         <div className="text-center py-12 bg-white rounded-2xl">
           <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">No exercises found</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-600">Page {page} of {pagination.totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+            disabled={page === pagination.totalPages}
+            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >
+            Next
+          </button>
         </div>
       )}
 

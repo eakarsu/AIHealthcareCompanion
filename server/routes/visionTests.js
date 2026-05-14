@@ -1,18 +1,33 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { callOpenRouterAI, AI_PROMPTS } from '../services/openRouterAI.js';
+import { callOpenRouterAI, parseStructuredResponse, AI_PROMPTS } from '../services/openRouterAI.js';
+import { getCached, setCached } from '../services/analysisCache.js';
+import { aiRateLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-// Get all vision tests for user
+// Get all vision tests for user (with pagination)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const tests = await prisma.visionTest.findMany({
-      where: { userId: req.user.id },
-      orderBy: { testDate: 'desc' }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const [tests, total] = await Promise.all([
+      prisma.visionTest.findMany({
+        where: { userId: req.user.id },
+        orderBy: { testDate: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.visionTest.count({ where: { userId: req.user.id } })
+    ]);
+
+    res.json({
+      data: tests,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
     });
-    res.json(tests);
   } catch (error) {
     console.error('Get vision tests error:', error);
     res.status(500).json({ error: 'Failed to fetch vision tests' });
@@ -33,6 +48,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
     console.error('Get vision test error:', error);
     res.status(500).json({ error: 'Failed to fetch vision test' });
   }
+});
+
+// Get cached analysis
+router.get('/:id/analysis/cached', authenticateToken, async (req, res) => {
+  const cached = getCached('visiontest', req.params.id);
+  if (cached) return res.json({ cached: true, ...cached });
+  res.json({ cached: false });
 });
 
 // Create vision test
@@ -86,7 +108,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 // AI Vision Analysis
-router.post('/:id/analyze', authenticateToken, async (req, res) => {
+router.post('/:id/analyze', authenticateToken, aiRateLimiter, async (req, res) => {
   try {
     const test = await prisma.visionTest.findFirst({
       where: { id: parseInt(req.params.id), userId: req.user.id }
@@ -114,18 +136,25 @@ Please analyze these vision test results and provide recommendations. Remember t
       return res.status(500).json({ error: aiResponse.error });
     }
 
+    const structured = parseStructuredResponse(aiResponse.content);
+
     // Save AI analysis to test
     const updated = await prisma.visionTest.update({
       where: { id: test.id },
       data: { aiAnalysis: aiResponse.content }
     });
 
-    res.json({
+    const result = {
       record: updated,
       analysis: aiResponse.content,
+      structured,
+      rawResponse: aiResponse.content,
       model: aiResponse.model,
       usage: aiResponse.usage
-    });
+    };
+
+    setCached('visiontest', req.params.id, result);
+    res.json(result);
   } catch (error) {
     console.error('AI Vision Analysis error:', error);
     res.status(500).json({ error: 'Failed to analyze vision test' });
