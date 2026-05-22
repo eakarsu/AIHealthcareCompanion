@@ -1,18 +1,5 @@
 
-// === Batch 04 Gaps & Frontend Mounts ===
-const route_gap_no_symptom_analyzer_endpoint = require('./routes/gap-no-symptom-analyzer-endpoint');
-const route_gap_no_medication_interaction_checker = require('./routes/gap-no-medication-interaction-checker');
-const route_gap_no_therapy_progress_analyzer = require('./routes/gap-no-therapy-progress-analyzer');
-const route_gap_no_skin_lesion_vision_ai = require('./routes/gap-no-skin-lesion-vision-ai');
-const route_gap_no_vision_test_interpreter = require('./routes/gap-no-vision-test-interpreter');
-const route_gap_no_medication_adherence_pattern_model = require('./routes/gap-no-medication-adherence-pattern-model');
-const route_gap_no_provider_portal_share_data_with = require('./routes/gap-no-provider-portal-share-data-with');
-const route_gap_no_prescription_pharmacy_integration = require('./routes/gap-no-prescription-pharmacy-integration');
-const route_gap_no_appointment_scheduling = require('./routes/gap-no-appointment-scheduling');
-const route_gap_no_telemedicine = require('./routes/gap-no-telemedicine');
-const route_gap_no_insurance_information_module = require('./routes/gap-no-insurance-information-module');
-const route_gap_no_lab_result_import = require('./routes/gap-no-lab-result-import');
-const route_gap_no_webhook_surface = require('./routes/gap-no-webhook-surface');
+// === Batch 04 Gaps & Frontend Mounts === (disabled: CommonJS routes incompatible with ESM)
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -35,9 +22,27 @@ import exportRoutes from './routes/export.js';
 import gdprRoutes from './routes/gdpr.js';
 import settingsRoutes from './routes/settings.js';
 import pass5Routes from './routes/pass5Tools.js';
+import symptomAnalyzerRoutes from './routes/symptomAnalyzer.js';
+import medicationAdherenceRoutes from './routes/medicationAdherence.js';
+import labTrendWatchRoutes from './routes/labTrendWatch.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
 import { setupSwagger } from './swagger.js';
+
+// Gap routes
+import gapAppointmentScheduling from './routes/gap-no-appointment-scheduling.js';
+import gapInsuranceInformation from './routes/gap-no-insurance-information-module.js';
+import gapLabResultImport from './routes/gap-no-lab-result-import.js';
+import gapMedicationAdherencePattern from './routes/gap-no-medication-adherence-pattern-model.js';
+import gapMedicationInteractionChecker from './routes/gap-no-medication-interaction-checker.js';
+import gapPrescriptionPharmacy from './routes/gap-no-prescription-pharmacy-integration.js';
+import gapProviderPortal from './routes/gap-no-provider-portal-share-data-with.js';
+import gapSkinLesionVisionAi from './routes/gap-no-skin-lesion-vision-ai.js';
+import gapSymptomAnalyzerEndpoint from './routes/gap-no-symptom-analyzer-endpoint.js';
+import gapTelemedicine from './routes/gap-no-telemedicine.js';
+import gapTherapyProgressAnalyzer from './routes/gap-no-therapy-progress-analyzer.js';
+import gapVisionTestInterpreter from './routes/gap-no-vision-test-interpreter.js';
+import gapWebhookSurface from './routes/gap-no-webhook-surface.js';
 
 dotenv.config();
 
@@ -78,8 +83,24 @@ app.use('/api/export', exportRoutes);
 app.use('/api/gdpr', gdprRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/pass5', pass5Routes);
-import('./routes/symptomAnalyzer.js').then(m => app.use('/api/symptom-analyzer', m.default));
-import('./routes/medicationAdherence.js').then(m => app.use('/api/medication-adherence', m.default));
+app.use('/api/symptom-analyzer', symptomAnalyzerRoutes);
+app.use('/api/medication-adherence', medicationAdherenceRoutes);
+app.use('/api/lab-trend-watch', labTrendWatchRoutes);
+
+// Gap routes
+app.use('/api/gap-no-appointment-scheduling', gapAppointmentScheduling);
+app.use('/api/gap-no-insurance-information-module', gapInsuranceInformation);
+app.use('/api/gap-no-lab-result-import', gapLabResultImport);
+app.use('/api/gap-no-medication-adherence-pattern-model', gapMedicationAdherencePattern);
+app.use('/api/gap-no-medication-interaction-checker', gapMedicationInteractionChecker);
+app.use('/api/gap-no-prescription-pharmacy-integration', gapPrescriptionPharmacy);
+app.use('/api/gap-no-provider-portal-share-data-with', gapProviderPortal);
+app.use('/api/gap-no-skin-lesion-vision-ai', gapSkinLesionVisionAi);
+app.use('/api/gap-no-symptom-analyzer-endpoint', gapSymptomAnalyzerEndpoint);
+app.use('/api/gap-no-telemedicine', gapTelemedicine);
+app.use('/api/gap-no-therapy-progress-analyzer', gapTherapyProgressAnalyzer);
+app.use('/api/gap-no-vision-test-interpreter', gapVisionTestInterpreter);
+app.use('/api/gap-no-webhook-surface', gapWebhookSurface);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -97,21 +118,6 @@ if (process.env.NODE_ENV === 'production') {
 // Error handling
 app.use(notFoundHandler);
 app.use(errorHandler);
-
-
-app.use('/api/gap-no-symptom-analyzer-endpoint', route_gap_no_symptom_analyzer_endpoint);
-app.use('/api/gap-no-medication-interaction-checker', route_gap_no_medication_interaction_checker);
-app.use('/api/gap-no-therapy-progress-analyzer', route_gap_no_therapy_progress_analyzer);
-app.use('/api/gap-no-skin-lesion-vision-ai', route_gap_no_skin_lesion_vision_ai);
-app.use('/api/gap-no-vision-test-interpreter', route_gap_no_vision_test_interpreter);
-app.use('/api/gap-no-medication-adherence-pattern-model', route_gap_no_medication_adherence_pattern_model);
-app.use('/api/gap-no-provider-portal-share-data-with', route_gap_no_provider_portal_share_data_with);
-app.use('/api/gap-no-prescription-pharmacy-integration', route_gap_no_prescription_pharmacy_integration);
-app.use('/api/gap-no-appointment-scheduling', route_gap_no_appointment_scheduling);
-app.use('/api/gap-no-telemedicine', route_gap_no_telemedicine);
-app.use('/api/gap-no-insurance-information-module', route_gap_no_insurance_information_module);
-app.use('/api/gap-no-lab-result-import', route_gap_no_lab_result_import);
-app.use('/api/gap-no-webhook-surface', route_gap_no_webhook_surface);
 
 app.listen(PORT, () => {
   console.log(`🏥 AI Healthcare Companion server running on port ${PORT}`);

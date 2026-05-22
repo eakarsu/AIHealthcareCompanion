@@ -1,7 +1,7 @@
 // === Batch 04 Gaps & Frontend Mounts ===
 // Gap feature: No prescription / pharmacy integration
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 let tableEnsured = false;
@@ -59,4 +59,4 @@ router.post('/', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

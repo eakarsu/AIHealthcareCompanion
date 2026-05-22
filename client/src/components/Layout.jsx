@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Home, Pill, Activity, Camera, Eye, FileText,
   LogOut, Menu, X, Heart, Bell, Settings, MessageCircle,
-  Shield, MessageSquare, FileCheck, Download
+  Shield, MessageSquare, FileCheck, Download, ClipboardList
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/skin-scans', icon: Camera, label: 'Skin Scanner' },
   { path: '/vision-tests', icon: Eye, label: 'Vision Tests' },
   { path: '/medical-history', icon: FileText, label: 'Medical History' },
+  { path: '/lab-trend-watch', icon: ClipboardList, label: 'Lab Trend Watch' },
   { path: '/notifications', icon: Bell, label: 'Notifications' },
   { path: '/feedback', icon: MessageCircle, label: 'Feedback' },
   { path: '/contact', icon: MessageSquare, label: 'Contact' },
@@ -155,6 +156,40 @@ export default function Layout() {
                   </Link>
                 );
               })}
+
+              <div className="border-t border-gray-100 mt-4 pt-4">
+                <p className="px-4 py-1 text-xs text-gray-400 font-semibold uppercase tracking-wider mb-1">AI Gap Features</p>
+                {[
+                  { path: '/gap-no-appointment-scheduling', label: 'Appointment Scheduling' },
+                  { path: '/gap-no-insurance-information-module', label: 'Insurance Information' },
+                  { path: '/gap-no-lab-result-import', label: 'Lab Result Import' },
+                  { path: '/gap-no-medication-adherence-pattern-model', label: 'Medication Adherence Pattern' },
+                  { path: '/gap-no-medication-interaction-checker', label: 'Medication Interaction' },
+                  { path: '/gap-no-prescription-pharmacy-integration', label: 'Prescription & Pharmacy' },
+                  { path: '/gap-no-provider-portal-share-data-with', label: 'Provider Portal' },
+                  { path: '/gap-no-skin-lesion-vision-ai', label: 'Skin Lesion Vision AI' },
+                  { path: '/gap-no-symptom-analyzer-endpoint', label: 'Symptom Analyzer' },
+                  { path: '/gap-no-telemedicine', label: 'Telemedicine' },
+                  { path: '/gap-no-therapy-progress-analyzer', label: 'Therapy Progress' },
+                  { path: '/gap-no-vision-test-interpreter', label: 'Vision Test Interpreter' },
+                  { path: '/gap-no-webhook-surface', label: 'Webhook Surface' },
+                ].map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm transition-all duration-200 ${
+                        isActive ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
 
               <div className="border-t border-gray-100 mt-4 pt-4">
                 {bottomLinks.map((item) => (

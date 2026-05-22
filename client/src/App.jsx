@@ -8,6 +8,7 @@ import PhysicalTherapy from './pages/PhysicalTherapy';
 import SkinScans from './pages/SkinScans';
 import VisionTests from './pages/VisionTests';
 import MedicalHistory from './pages/MedicalHistory';
+import LabTrendWatch from './pages/LabTrendWatch';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import Feedback from './pages/Feedback';
@@ -41,6 +42,9 @@ import GapNoInsuranceInformationModule from './pages/GapNoInsuranceInformationMo
 import GapNoLabResultImport from './pages/GapNoLabResultImport';
 import GapNoWebhookSurface from './pages/GapNoWebhookSurface';
 
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
+
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
 
@@ -72,6 +76,9 @@ function OnboardingWrapper({ children }) {
 function App() {
   return (
     <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
@@ -90,6 +97,7 @@ function App() {
         <Route path="skin-scans" element={<SkinScans />} />
         <Route path="vision-tests" element={<VisionTests />} />
         <Route path="medical-history" element={<MedicalHistory />} />
+        <Route path="lab-trend-watch" element={<LabTrendWatch />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
         <Route path="feedback" element={<Feedback />} />
