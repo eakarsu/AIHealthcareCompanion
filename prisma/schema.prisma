@@ -183,3 +183,71 @@ model ContactMessage {
   status    String   @default("new")
   createdAt DateTime @default(now())
 }
+
+model CareEpisode {
+  id               Int      @id @default(autoincrement())
+  tenantKey        String
+  patientId        Int
+  clientEventId    String
+  status           String
+  rulesetVersion   String
+  consent          Json
+  symptoms         Json
+  goals            Json
+  triage           Json
+  reviewedBy       Int?
+  reviewedAt       DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tenantKey, clientEventId])
+  @@index([tenantKey, patientId, status])
+}
+
+model CareEvidenceSnapshot {
+  id          Int      @id @default(autoincrement())
+  episodeId   Int
+  sourceTitle String
+  sourceUri   String
+  sourceSha256 String
+  publishedAt DateTime?
+  retrievedAt DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([episodeId])
+}
+
+model CareProposedAction {
+  id        Int      @id @default(autoincrement())
+  episodeId Int
+  type      String
+  status    String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([episodeId, status])
+}
+
+model CareReview {
+  id         Int      @id @default(autoincrement())
+  episodeId  Int
+  reviewerId Int
+  reviewerRole String
+  decision   String
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([episodeId])
+}
+
+model CareWorkflowAudit {
+  id        Int      @id @default(autoincrement())
+  tenantKey String
+  episodeId Int?
+  actorId   Int
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+
+  @@index([tenantKey, episodeId, createdAt])
+}

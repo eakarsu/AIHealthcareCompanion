@@ -31,7 +31,7 @@ describe('Auth Routes', () => {
         .post('/api/auth/register')
         .send({
           email: uniqueEmail,
-          password: 'testpass123',
+          password: 'testpass1234',
           name: 'Register Test User'
         });
 
@@ -69,7 +69,7 @@ describe('Auth Routes', () => {
         });
 
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/at least 6 characters/);
+      expect(res.body.error).toMatch(/at least 12 characters/);
     });
 
     it('should reject duplicate email registration', async () => {
@@ -80,7 +80,7 @@ describe('Auth Routes', () => {
         .post('/api/auth/register')
         .send({
           email: user.email,
-          password: 'testpass123',
+          password: 'testpass1234',
           name: 'Duplicate User'
         });
 
@@ -102,7 +102,7 @@ describe('Auth Routes', () => {
         .post('/api/auth/login')
         .send({
           email: loginUser.email,
-          password: 'testpass123'
+          password: 'testpass1234'
         });
 
       expect(res.status).toBe(200);
@@ -130,7 +130,7 @@ describe('Auth Routes', () => {
         .post('/api/auth/login')
         .send({
           email: 'nonexistent@nowhere.com',
-          password: 'testpass123'
+          password: 'testpass1234'
         });
 
       expect(res.status).toBe(400);

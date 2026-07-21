@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
  * Returns the created user record.
  */
 export const createTestUser = async () => {
-  const hashedPassword = await bcrypt.hash('testpass123', 10);
+  const hashedPassword = await bcrypt.hash('testpass1234', 10);
   return prisma.user.create({
     data: {
       email: `test-${Date.now()}@test.com`,

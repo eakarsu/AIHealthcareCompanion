@@ -4,13 +4,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
 import medicationRoutes from './routes/medications.js';
-import physicalTherapyRoutes from './routes/physicalTherapy.js';
-import skinScanRoutes from './routes/skinScans.js';
-import visionTestRoutes from './routes/visionTests.js';
 import medicalHistoryRoutes from './routes/medicalHistory.js';
 import uploadRoutes from './routes/upload.js';
 import searchRoutes from './routes/search.js';
@@ -21,28 +19,10 @@ import contactRoutes from './routes/contact.js';
 import exportRoutes from './routes/export.js';
 import gdprRoutes from './routes/gdpr.js';
 import settingsRoutes from './routes/settings.js';
-import pass5Routes from './routes/pass5Tools.js';
-import symptomAnalyzerRoutes from './routes/symptomAnalyzer.js';
-import medicationAdherenceRoutes from './routes/medicationAdherence.js';
-import labTrendWatchRoutes from './routes/labTrendWatch.js';
+import careWorkflowRoutes from './routes/careWorkflow.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
 import { setupSwagger } from './swagger.js';
-
-// Gap routes
-import gapAppointmentScheduling from './routes/gap-no-appointment-scheduling.js';
-import gapInsuranceInformation from './routes/gap-no-insurance-information-module.js';
-import gapLabResultImport from './routes/gap-no-lab-result-import.js';
-import gapMedicationAdherencePattern from './routes/gap-no-medication-adherence-pattern-model.js';
-import gapMedicationInteractionChecker from './routes/gap-no-medication-interaction-checker.js';
-import gapPrescriptionPharmacy from './routes/gap-no-prescription-pharmacy-integration.js';
-import gapProviderPortal from './routes/gap-no-provider-portal-share-data-with.js';
-import gapSkinLesionVisionAi from './routes/gap-no-skin-lesion-vision-ai.js';
-import gapSymptomAnalyzerEndpoint from './routes/gap-no-symptom-analyzer-endpoint.js';
-import gapTelemedicine from './routes/gap-no-telemedicine.js';
-import gapTherapyProgressAnalyzer from './routes/gap-no-therapy-progress-analyzer.js';
-import gapVisionTestInterpreter from './routes/gap-no-vision-test-interpreter.js';
-import gapWebhookSurface from './routes/gap-no-webhook-surface.js';
 
 dotenv.config();
 
@@ -69,9 +49,6 @@ setupSwagger(app);
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/medications', medicationRoutes);
-app.use('/api/physical-therapy', physicalTherapyRoutes);
-app.use('/api/skin-scans', skinScanRoutes);
-app.use('/api/vision-tests', visionTestRoutes);
 app.use('/api/medical-history', medicalHistoryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/search', searchRoutes);
@@ -82,25 +59,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/gdpr', gdprRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/pass5', pass5Routes);
-app.use('/api/symptom-analyzer', symptomAnalyzerRoutes);
-app.use('/api/medication-adherence', medicationAdherenceRoutes);
-app.use('/api/lab-trend-watch', labTrendWatchRoutes);
-
-// Gap routes
-app.use('/api/gap-no-appointment-scheduling', gapAppointmentScheduling);
-app.use('/api/gap-no-insurance-information-module', gapInsuranceInformation);
-app.use('/api/gap-no-lab-result-import', gapLabResultImport);
-app.use('/api/gap-no-medication-adherence-pattern-model', gapMedicationAdherencePattern);
-app.use('/api/gap-no-medication-interaction-checker', gapMedicationInteractionChecker);
-app.use('/api/gap-no-prescription-pharmacy-integration', gapPrescriptionPharmacy);
-app.use('/api/gap-no-provider-portal-share-data-with', gapProviderPortal);
-app.use('/api/gap-no-skin-lesion-vision-ai', gapSkinLesionVisionAi);
-app.use('/api/gap-no-symptom-analyzer-endpoint', gapSymptomAnalyzerEndpoint);
-app.use('/api/gap-no-telemedicine', gapTelemedicine);
-app.use('/api/gap-no-therapy-progress-analyzer', gapTherapyProgressAnalyzer);
-app.use('/api/gap-no-vision-test-interpreter', gapVisionTestInterpreter);
-app.use('/api/gap-no-webhook-surface', gapWebhookSurface);
+app.use('/api/care-workflow', careWorkflowRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -119,6 +78,12 @@ if (process.env.NODE_ENV === 'production') {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🏥 AI Healthcare Companion server running on port ${PORT}`);
-});
+const isDirectExecution = process.argv[1]
+  && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url));
+if (isDirectExecution) {
+  app.listen(PORT, () => {
+    console.log(`AI Healthcare Companion server running on port ${PORT}`);
+  });
+}
+
+export default app;

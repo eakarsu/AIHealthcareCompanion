@@ -72,11 +72,11 @@ describe('Medication Routes', () => {
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(res.status).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
 
       // The created medication should be in the list
-      const found = res.body.find(m => m.id === createdMedicationId);
+      const found = res.body.data.find(m => m.id === createdMedicationId);
       expect(found).toBeDefined();
       expect(found.name).toBe(sampleMedication.name);
     });
@@ -132,7 +132,7 @@ describe('Medication Routes', () => {
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(res.status).toBe(200);
-      const found = res.body.find(m => m.id === createdMedicationId);
+      const found = res.body.data.find(m => m.id === createdMedicationId);
       expect(found).toBeUndefined();
     });
 

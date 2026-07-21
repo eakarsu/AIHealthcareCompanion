@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.RESET_DATABASE !== '1' || process.env.SEED_DEMO_DATA !== '1') throw new Error('Set RESET_DATABASE=1 and SEED_DEMO_DATA=1 for destructive demo seed');
+  if (!process.env.SEED_DEMO_PASSWORD || process.env.SEED_DEMO_PASSWORD.length < 12) throw new Error('SEED_DEMO_PASSWORD must be at least 12 characters');
   console.log('🌱 Starting database seed...\n');
 
   // Clear existing data (order matters for foreign keys)
@@ -21,10 +23,10 @@ async function main() {
   console.log('✓ Cleared existing data');
 
   // Create demo user
-  const hashedPassword = await bcrypt.hash('demo123', 10);
+  const hashedPassword = await bcrypt.hash(process.env.SEED_DEMO_PASSWORD, 12);
   const user = await prisma.user.create({
     data: {
-      email: 'demo@healthcare.com',
+      email: 'demo@healthcare.invalid',
       password: hashedPassword,
       name: 'Demo User',
       role: 'user',
@@ -36,10 +38,10 @@ async function main() {
   });
 
   // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 10);
+  const adminPassword = await bcrypt.hash(process.env.SEED_DEMO_PASSWORD, 12);
   const admin = await prisma.user.create({
     data: {
-      email: 'admin@healthcare.com',
+      email: 'admin@healthcare.invalid',
       password: adminPassword,
       name: 'Admin User',
       role: 'admin',
@@ -50,8 +52,7 @@ async function main() {
     }
   });
 
-  console.log('✓ Created demo user: demo@healthcare.com / demo123');
-  console.log('✓ Created admin user: admin@healthcare.com / admin123\n');
+  console.log('Created demo users with environment-provided credentials.');
 
   // Seed Medications (15+ items)
   const medications = [
@@ -349,8 +350,7 @@ async function main() {
   console.log(`   - ${feedbacks.length} feedbacks`);
   console.log(`   - ${contactMessages.length} contact messages`);
   console.log('\n🔐 Login credentials:');
-  console.log('   Demo: demo@healthcare.com / demo123');
-  console.log('   Admin: admin@healthcare.com / admin123');
+  console.log('   Demo accounts use environment-provided credentials.');
 }
 
 main()

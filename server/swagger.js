@@ -464,7 +464,7 @@ const swaggerDefinition = {
                 properties: {
                   name: { type: 'string', example: 'John Doe' },
                   email: { type: 'string', format: 'email', example: 'john@example.com' },
-                  password: { type: 'string', minLength: 6, example: 'password123' }
+                  password: { type: 'string', minLength: 12, example: 'use-a-secret-manager' }
                 }
               }
             }
@@ -500,7 +500,7 @@ const swaggerDefinition = {
                 required: ['email', 'password'],
                 properties: {
                   email: { type: 'string', format: 'email', example: 'demo@healthcare.com' },
-                  password: { type: 'string', example: 'demo123' }
+                  password: { type: 'string', example: 'use-a-secret-manager' }
                 }
               }
             }

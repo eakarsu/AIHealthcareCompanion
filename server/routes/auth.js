@@ -5,6 +5,8 @@ import crypto from 'crypto';
 import prisma from '../db.js';
 
 const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) throw new Error('JWT_SECRET must be configured with at least 32 characters');
 
 // Register
 router.post('/register', async (req, res) => {
@@ -14,8 +16,8 @@ router.post('/register', async (req, res) => {
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (password.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters' });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -32,18 +34,17 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     const refreshToken = jwt.sign(
       { id: user.id, type: 'refresh' },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '30d' }
     );
 
     // In production, send verification email here
-    console.log(`[Email Verification] Token for ${email}: ${verifyToken}`);
 
     res.json({
       token,
@@ -73,13 +74,13 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     const refreshToken = jwt.sign(
       { id: user.id, type: 'refresh' },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '30d' }
     );
 
@@ -104,7 +105,7 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
       select: { id: true, email: true, name: true, role: true, emailVerified: true, darkMode: true, language: true, onboardingDone: true }
@@ -143,7 +144,6 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     // In production, send email with reset link
-    console.log(`[Password Reset] Token for ${email}: ${resetToken}`);
 
     res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
   } catch (error) {
@@ -159,8 +159,8 @@ router.post('/reset-password', async (req, res) => {
     if (!token || !newPassword) {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (newPassword.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters' });
     }
 
     const user = await prisma.user.findFirst({
@@ -222,7 +222,7 @@ router.post('/resend-verification', async (req, res) => {
     const authToken = authHeader && authHeader.split(' ')[1];
     if (!authToken) return res.status(401).json({ error: 'No token provided' });
 
-    const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
+    const decoded = jwt.verify(authToken, JWT_SECRET);
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -234,7 +234,6 @@ router.post('/resend-verification', async (req, res) => {
       data: { verifyToken }
     });
 
-    console.log(`[Email Verification] New token for ${user.email}: ${verifyToken}`);
     res.json({ message: 'Verification email has been resent' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to resend verification' });
@@ -249,7 +248,7 @@ router.post('/refresh-token', async (req, res) => {
       return res.status(400).json({ error: 'Refresh token is required' });
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    const decoded = jwt.verify(refreshToken, JWT_SECRET);
     if (decoded.type !== 'refresh') {
       return res.status(400).json({ error: 'Invalid refresh token' });
     }
@@ -265,13 +264,13 @@ router.post('/refresh-token', async (req, res) => {
 
     const newToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
     const newRefreshToken = jwt.sign(
       { id: user.id, type: 'refresh' },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: '30d' }
     );
 

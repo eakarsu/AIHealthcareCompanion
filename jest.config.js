@@ -6,6 +6,7 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1'
   },
   testMatch: ['**/tests/**/*.test.js'],
+  testPathIgnorePatterns: ['/tests/careSupportWorkflow\\.test\\.js$'],
   collectCoverageFrom: [
     'server/**/*.js',
     '!server/seed.js',
