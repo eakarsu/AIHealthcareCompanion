@@ -20,6 +20,7 @@ import exportRoutes from './routes/export.js';
 import gdprRoutes from './routes/gdpr.js';
 import settingsRoutes from './routes/settings.js';
 import careWorkflowRoutes from './routes/careWorkflow.js';
+import pass5ToolsRoutes from './routes/pass5Tools.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
 import { setupSwagger } from './swagger.js';
@@ -60,6 +61,7 @@ app.use('/api/export', exportRoutes);
 app.use('/api/gdpr', gdprRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/care-workflow', careWorkflowRoutes);
+app.use('/api/pass5', pass5ToolsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
