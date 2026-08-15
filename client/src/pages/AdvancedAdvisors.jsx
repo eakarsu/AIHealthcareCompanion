@@ -1,3 +1,4 @@
+import GeneratedAiResponse from './GeneratedAiResponse';
 // Apply pass 5 page — wraps three pass-5 advisory endpoints:
 //   /api/pass5/symptom-analyzer, /api/pass5/medication-adherence-advisor,
 //   /api/pass5/therapy-progress-summary.
@@ -84,7 +85,7 @@ export default function AdvancedAdvisors() {
           {result.structured && (
             <details style={{ marginTop: 12 }}>
               <summary>Structured</summary>
-              <pre style={{ background: '#fff', padding: 8, borderRadius: 4, overflowX: 'auto' }}>{JSON.stringify(result.structured, null, 2)}</pre>
+              <GeneratedAiResponse response={result} />
             </details>
           )}
         </div>

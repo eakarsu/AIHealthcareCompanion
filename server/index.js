@@ -1,5 +1,4 @@
 
-// === Batch 04 Gaps & Frontend Mounts === (disabled: CommonJS routes incompatible with ESM)
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -21,6 +20,7 @@ import gdprRoutes from './routes/gdpr.js';
 import settingsRoutes from './routes/settings.js';
 import careWorkflowRoutes from './routes/careWorkflow.js';
 import pass5ToolsRoutes from './routes/pass5Tools.js';
+import generatedFeatureRoutes from './routes/generatedFeatures.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
 import { setupSwagger } from './swagger.js';
@@ -62,6 +62,7 @@ app.use('/api/gdpr', gdprRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/care-workflow', careWorkflowRoutes);
 app.use('/api/pass5', pass5ToolsRoutes);
+app.use('/api', generatedFeatureRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
