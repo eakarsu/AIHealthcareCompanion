@@ -17,7 +17,7 @@ export default function Feedback() {
   const fetchFeedbacks = async () => {
     try {
       const response = await api.get('/feedback');
-      setFeedbacks(response.data);
+      setFeedbacks(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error:', error);
     } finally {

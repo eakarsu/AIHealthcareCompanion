@@ -1,3 +1,4 @@
+import AIReport from './AIReport';
 import ReactMarkdown from 'react-markdown';
 import { Sparkles, Brain, CheckCircle, AlertTriangle, Info, Lightbulb } from 'lucide-react';
 
@@ -31,9 +32,12 @@ export default function AIResponseDisplay({ response, loading, error }) {
     );
   }
 
-  if (!response) {
+  if (response === null || response === undefined || response === '') {
     return null;
   }
+
+  const structured = typeof response !== 'string' || /^\s*(?:```json\s*)?[\[{]/i.test(response);
+  if (structured) return <AIReport response={response} title="AI analysis results" />;
 
   // Strip triple backticks from AI response
   const cleanedResponse = stripCodeBlocks(response);

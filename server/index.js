@@ -1,3 +1,8 @@
+import { authenticateToken as aiWorkspaceDependency1 } from "./middleware/auth.js";
+import aiWorkspaceDependency2 from "./db.js";
+import aiWorkspaceDependency3 from "./aiWorkspaceAdapters.cjs";
+import aiWorkspaceDependency4 from "./aiWorkspace.cjs";
+import { readFileSync as readAIWorkspaceFile } from 'node:fs';
 
 import express from 'express';
 import cors from 'cors';
@@ -21,6 +26,10 @@ import settingsRoutes from './routes/settings.js';
 import careWorkflowRoutes from './routes/careWorkflow.js';
 import pass5ToolsRoutes from './routes/pass5Tools.js';
 import generatedFeatureRoutes from './routes/generatedFeatures.js';
+import physicalTherapyRoutes from './routes/physicalTherapy.js';
+import skinScansRoutes from './routes/skinScans.js';
+import visionTestsRoutes from './routes/visionTests.js';
+import labTrendWatchRoutes from './routes/labTrendWatch.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { requestLogger } from './middleware/logger.js';
 import { setupSwagger } from './swagger.js';
@@ -62,6 +71,10 @@ app.use('/api/gdpr', gdprRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/care-workflow', careWorkflowRoutes);
 app.use('/api/pass5', pass5ToolsRoutes);
+app.use('/api/physical-therapy', physicalTherapyRoutes);
+app.use('/api/skin-scans', skinScansRoutes);
+app.use('/api/vision-tests', visionTestsRoutes);
+app.use('/api/lab-trend-watch', labTrendWatchRoutes);
 app.use('/api', generatedFeatureRoutes);
 
 // Health check
@@ -78,6 +91,15 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Error handling
+
+// Advisory AI reports only; native execution and approval routes stay unchanged.
+const aiWorkspaceSupport = aiWorkspaceDependency3;
+const aiWorkspaceFeatures = JSON.parse(readAIWorkspaceFile(new URL("./aiWorkspaceFeatures.json", import.meta.url), 'utf8'));
+const aiWorkspaceDatabase = aiWorkspaceSupport.prismaQueryClient(aiWorkspaceDependency2);
+app.use('/api/report-workspace', aiWorkspaceDependency4.createAIWorkspaceRouter({
+  pool: aiWorkspaceDatabase, authenticateToken: aiWorkspaceSupport.verifiedActorAuth(aiWorkspaceDependency1),
+  aiRateLimiter: aiWorkspaceSupport.createWorkspaceLimiter(), features: aiWorkspaceFeatures,
+}));
 app.use(notFoundHandler);
 app.use(errorHandler);
 

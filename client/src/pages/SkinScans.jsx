@@ -39,8 +39,8 @@ export default function SkinScans() {
   const fetchScans = async (p = 1) => {
     try {
       const response = await api.get('/skin-scans', { params: { page: p, limit: LIMIT } });
-      setScans(response.data.data || response.data);
-      if (response.data.pagination) setPagination(response.data.pagination);
+      setScans(Array.isArray(response.data?.data) ? response.data.data : Array.isArray(response.data) ? response.data : []);
+      if (response.data?.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching scans:', error);
     } finally {
@@ -516,7 +516,7 @@ export default function SkinScans() {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setFormData({ ...sample, imageUrl: '' })}
+                    onClick={() => setFormData({ ...formData, ...sample, imageUrl: formData.imageUrl })}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
                   >
                     {sample.bodyLocation}
@@ -537,6 +537,7 @@ export default function SkinScans() {
               currentImage={formData.imageUrl}
               onImageUploaded={(url) => setFormData({ ...formData, imageUrl: url })}
             />
+            <p className="text-xs text-gray-500 mt-1">Examples keep an uploaded photo. Upload a real photo for image analysis.</p>
           </div>
 
           <div>

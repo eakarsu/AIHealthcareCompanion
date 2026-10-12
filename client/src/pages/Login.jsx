@@ -35,8 +35,13 @@ export default function Login() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail(import.meta.env.VITE_DEMO_EMAIL || '');
-    setPassword(import.meta.env.VITE_DEMO_PASSWORD || '');
+    if (!import.meta.env.VITE_DEMO_EMAIL || !import.meta.env.VITE_DEMO_PASSWORD) {
+      setError('Demo credentials are not configured for this app.');
+      return;
+    }
+    setError('');
+    setEmail(import.meta.env.VITE_DEMO_EMAIL);
+    setPassword(import.meta.env.VITE_DEMO_PASSWORD);
     setIsLogin(true);
   };
 
@@ -140,14 +145,15 @@ export default function Login() {
           {/* Demo Credentials Button */}
           <div className="mt-6">
             <button
+              type="button"
               onClick={fillDemoCredentials}
               className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
             >
               <Sparkles className="w-5 h-5" />
-              Auto Fill Demo Credentials
+              Fill demo credentials
             </button>
             <p className="text-center text-xs text-gray-500 mt-2">
-              demo@healthcare.com / demo123
+              Uses the configured demo account; review before signing in.
             </p>
           </div>
 

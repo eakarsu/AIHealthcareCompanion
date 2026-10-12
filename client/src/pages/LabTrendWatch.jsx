@@ -19,7 +19,7 @@ export default function LabTrendWatch() {
         <p className="text-gray-600">Track lab drift, medication flags, and follow-up reminders from imported results.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-4">
-        {Object.entries(data.summary).map(([key, value]) => (
+        {Object.entries(data.summary && typeof data.summary === 'object' && !Array.isArray(data.summary) ? data.summary : {}).map(([key, value]) => (
           <div key={key} className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
             <div className="text-2xl font-bold text-blue-700">{value}</div>
             <div className="text-sm text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1')}</div>
@@ -29,7 +29,7 @@ export default function LabTrendWatch() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
           <h2 className="text-xl font-semibold mb-4">Trend Flags</h2>
-          {data.trends.map((trend) => (
+          {(Array.isArray(data.trends) ? data.trends : []).map((trend) => (
             <div key={trend.panel} className="border-t border-gray-100 py-3">
               <div className="font-semibold">{trend.panel} - {trend.direction}</div>
               <div className="text-sm text-gray-600">{trend.latest} - {trend.concern}</div>
@@ -39,7 +39,7 @@ export default function LabTrendWatch() {
         </section>
         <section className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
           <h2 className="text-xl font-semibold mb-4">Follow-ups</h2>
-          {data.reminders.map((item) => (
+          {(Array.isArray(data.reminders) ? data.reminders : []).map((item) => (
             <div key={`${item.item}-${item.due}`} className="border-t border-gray-100 py-3">
               <div className="font-semibold">{item.item}</div>
               <div className="text-sm text-gray-600">{item.patient} - due {item.due}</div>

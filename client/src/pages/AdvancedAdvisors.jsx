@@ -1,10 +1,10 @@
-import GeneratedAiResponse from './GeneratedAiResponse';
 // Apply pass 5 page — wraps three pass-5 advisory endpoints:
 //   /api/pass5/symptom-analyzer, /api/pass5/medication-adherence-advisor,
 //   /api/pass5/therapy-progress-summary.
 // All explicitly disclaimed as informational, not medical advice.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../services/api';
+import AIReport from '../components/AIReport';
 
 const TABS = [
   { id: 'symptom', label: 'Symptom Triage' },
@@ -20,7 +20,20 @@ export default function AdvancedAdvisors() {
 
   const [symptomForm, setSymptomForm] = useState({ symptoms: '', duration: '', severity: '', age: '', context: '' });
   const [adherenceForm, setAdherenceForm] = useState({ medication_id: '' });
+  const [availableMedications, setAvailableMedications] = useState([]);
   const [ptForm, setPtForm] = useState({ window_days: '30' });
+  const symptomExamples = [
+    { label: 'Headache', symptoms: 'Intermittent tension headache after screen work; no sudden onset or neurological symptoms.', duration: '3 days', severity: '4', age: '34', context: 'Desk work and poor sleep this week; seeking general next steps.' },
+    { label: 'Knee discomfort', symptoms: 'Mild knee discomfort after walking; no fall, swelling, or inability to bear weight.', duration: '1 week', severity: '3', age: '52', context: 'Increased walking recently; wants questions to discuss with a clinician.' },
+    { label: 'Seasonal congestion', symptoms: 'Sneezing and nasal congestion without fever or breathing difficulty.', duration: '5 days', severity: '2', age: '29', context: 'Symptoms recur during spring pollen season; looking for self-care information.' },
+  ];
+  useEffect(() => {
+    let active = true;
+    api.get('/medications', { params: { page: 1, limit: 20 } })
+      .then(({ data }) => { if (active) setAvailableMedications(Array.isArray(data.data || data) ? (data.data || data) : []); })
+      .catch(() => { if (active) setAvailableMedications([]); });
+    return () => { active = false; };
+  }, []);
 
   const submit = async (path, body) => {
     setLoading(true); setError(null); setResult(null);
@@ -51,6 +64,7 @@ export default function AdvancedAdvisors() {
       <div style={{ background: '#fff', borderRadius: 8, padding: 16, border: '1px solid #ddd' }}>
         {tab === 'symptom' && (
           <form onSubmit={e => { e.preventDefault(); submit('/pass5/symptom-analyzer', { ...symptomForm, severity: symptomForm.severity ? Number(symptomForm.severity) : undefined, age: symptomForm.age ? Number(symptomForm.age) : undefined }); }}>
+            <div>{symptomExamples.map(example => <button key={example.label} type="button" onClick={() => setSymptomForm({ symptoms: example.symptoms, duration: example.duration, severity: example.severity, age: example.age, context: example.context })}>{example.label} example</button>)}</div>
             <label style={{ display: 'block', marginBottom: 8 }}>Symptoms *<textarea required rows={3} style={{ width: '100%', padding: 6 }} value={symptomForm.symptoms} onChange={e => setSymptomForm({ ...symptomForm, symptoms: e.target.value })} /></label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
               <label>Duration<input style={{ width: '100%' }} value={symptomForm.duration} onChange={e => setSymptomForm({ ...symptomForm, duration: e.target.value })} /></label>
@@ -64,6 +78,8 @@ export default function AdvancedAdvisors() {
 
         {tab === 'adherence' && (
           <form onSubmit={e => { e.preventDefault(); submit('/pass5/medication-adherence-advisor', { medication_id: adherenceForm.medication_id ? Number(adherenceForm.medication_id) : undefined }); }}>
+            <div><button type="button" onClick={() => setAdherenceForm({ medication_id: '' })}>All active medications</button>{availableMedications.slice(0, 3).map(medication => <button key={medication.id} type="button" onClick={() => setAdherenceForm({ medication_id: String(medication.id) })}>{medication.name} example</button>)}</div>
+            <p>Medication examples use your existing records. If none appear, add a medication first or use all active medications.</p>
             <label style={{ display: 'block' }}>Medication ID (optional - all active if blank)<input style={{ width: 200 }} value={adherenceForm.medication_id} onChange={e => setAdherenceForm({ medication_id: e.target.value })} /></label>
             <button type="submit" disabled={loading} style={{ marginTop: 12, padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 6 }}>{loading ? 'Building…' : 'Build adherence plan'}</button>
           </form>
@@ -71,6 +87,7 @@ export default function AdvancedAdvisors() {
 
         {tab === 'pt' && (
           <form onSubmit={e => { e.preventDefault(); submit('/pass5/therapy-progress-summary', { window_days: Number(ptForm.window_days) || 30 }); }}>
+            <div>{[14, 30, 90].map(days => <button key={days} type="button" onClick={() => setPtForm({ window_days: String(days) })}>{days} day example</button>)}</div>
             <label style={{ display: 'block' }}>Lookback window (days)<input type="number" min="7" max="365" style={{ width: 120 }} value={ptForm.window_days} onChange={e => setPtForm({ window_days: e.target.value })} /></label>
             <button type="submit" disabled={loading} style={{ marginTop: 12, padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 6 }}>{loading ? 'Summarizing…' : 'Summarize progress'}</button>
           </form>
@@ -81,13 +98,7 @@ export default function AdvancedAdvisors() {
       {result && (
         <div style={{ marginTop: 16, padding: 16, background: '#fafafa', borderRadius: 8 }}>
           {result.disclaimer && <div style={{ fontSize: 12, color: '#a00', marginBottom: 8 }}>{result.disclaimer}</div>}
-          <div style={{ whiteSpace: 'pre-wrap' }}>{result.content}</div>
-          {result.structured && (
-            <details style={{ marginTop: 12 }}>
-              <summary>Structured</summary>
-              <GeneratedAiResponse response={result} />
-            </details>
-          )}
+          <AIReport response={result.structured ?? result.content ?? result} title="Advisor result" />
         </div>
       )}
     </div>

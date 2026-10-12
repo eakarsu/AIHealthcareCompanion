@@ -42,8 +42,8 @@ export default function VisionTests() {
   const fetchTests = async (p = 1) => {
     try {
       const response = await api.get('/vision-tests', { params: { page: p, limit: LIMIT } });
-      setTests(response.data.data || response.data);
-      if (response.data.pagination) setPagination(response.data.pagination);
+      setTests(Array.isArray(response.data?.data) ? response.data.data : Array.isArray(response.data) ? response.data : []);
+      if (response.data?.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching tests:', error);
     } finally {
@@ -426,7 +426,7 @@ export default function VisionTests() {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setFormData({ ...sample })}
+                    onClick={() => setFormData({ ...formData, ...sample })}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
                   >
                     {sample.testType}

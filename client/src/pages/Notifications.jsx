@@ -12,8 +12,8 @@ export default function Notifications() {
   const fetchNotifications = async () => {
     try {
       const response = await api.get('/notifications');
-      setNotifications(response.data.notifications);
-      setUnreadCount(response.data.unreadCount);
+      setNotifications(Array.isArray(response.data?.notifications) ? response.data.notifications : []);
+      setUnreadCount(Number(response.data?.unreadCount) || 0);
     } catch (error) {
       console.error('Error:', error);
     } finally {

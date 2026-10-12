@@ -1,3 +1,4 @@
+import AIReportLibrary from "./AIReportLibrary";
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -227,7 +228,7 @@ export default function Layout() {
               </button>
             </div>
           </div>
-        </aside>
+        <AIReportLibrary /></aside>
 
         {/* Main Content */}
         <main className="flex-1 min-h-screen lg:min-h-[calc(100vh)]" role="main">

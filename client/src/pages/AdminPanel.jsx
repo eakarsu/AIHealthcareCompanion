@@ -25,11 +25,11 @@ export default function AdminPanel() {
         api.get('/admin/feedbacks'),
         api.get('/admin/contacts')
       ]);
-      setStats(statsRes.data);
-      setUsers(usersRes.data.users);
-      setAuditLogs(logsRes.data.logs);
-      setFeedbacks(fbRes.data);
-      setContacts(contactRes.data);
+      setStats(statsRes.data && typeof statsRes.data === 'object' && !Array.isArray(statsRes.data) ? statsRes.data : {});
+      setUsers(Array.isArray(usersRes.data?.users) ? usersRes.data.users : []);
+      setAuditLogs(Array.isArray(logsRes.data?.logs) ? logsRes.data.logs : []);
+      setFeedbacks(Array.isArray(fbRes.data) ? fbRes.data : []);
+      setContacts(Array.isArray(contactRes.data) ? contactRes.data : []);
     } catch (error) {
       console.error('Admin data error:', error);
     } finally {

@@ -43,8 +43,8 @@ export default function PhysicalTherapy() {
   const fetchExercises = async (p = 1) => {
     try {
       const response = await api.get('/physical-therapy', { params: { page: p, limit: LIMIT } });
-      setExercises(response.data.data || response.data);
-      if (response.data.pagination) setPagination(response.data.pagination);
+      setExercises(Array.isArray(response.data?.data) ? response.data.data : Array.isArray(response.data) ? response.data : []);
+      if (response.data?.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching exercises:', error);
     } finally {
@@ -453,7 +453,7 @@ export default function PhysicalTherapy() {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setFormData({ ...sample })}
+                    onClick={() => setFormData({ ...formData, ...sample })}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
                   >
                     {sample.exerciseName}
@@ -578,7 +578,7 @@ export default function PhysicalTherapy() {
               placeholder="YouTube link or direct video URL"
               className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500"
             />
-            <p className="text-xs text-gray-500 mt-1">Supports YouTube links or direct video URLs</p>
+            <p className="text-xs text-gray-500 mt-1">Examples keep an existing video URL. Add a verified video link if one is available.</p>
           </div>
           <div className="flex justify-end gap-3 pt-4">
             <button

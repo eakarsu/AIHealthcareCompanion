@@ -42,8 +42,8 @@ export default function MedicalHistory() {
   const fetchRecords = async (p = 1) => {
     try {
       const response = await api.get('/medical-history', { params: { page: p, limit: LIMIT } });
-      setRecords(response.data.data || response.data);
-      if (response.data.pagination) setPagination(response.data.pagination);
+      setRecords(Array.isArray(response.data?.data) ? response.data.data : Array.isArray(response.data) ? response.data : []);
+      if (response.data?.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching records:', error);
     } finally {
@@ -156,9 +156,9 @@ export default function MedicalHistory() {
   };
 
   const sampleRecords = [
-    { condition: 'Type 2 Diabetes', diagnosisDate: '2023-03-15', status: 'Managed', treatingDoctor: 'Dr. Sarah Johnson', hospital: 'City General Hospital', medications: 'Metformin 500mg twice daily', surgeries: '', allergies: 'Penicillin, Sulfa drugs', familyHistory: 'Father had Type 2 Diabetes, Mother had hypertension', notes: 'A1C levels trending down from 8.2 to 7.1 over past year. Regular exercise and diet modifications.' },
-    { condition: 'Hypertension', diagnosisDate: '2022-08-20', status: 'Controlled', treatingDoctor: 'Dr. Michael Chen', hospital: 'Heart Care Clinic', medications: 'Lisinopril 10mg daily, Amlodipine 5mg daily', surgeries: '', allergies: 'Penicillin', familyHistory: 'Mother had hypertension, Maternal grandmother had stroke', notes: 'Blood pressure consistently around 128/82 on current medication regimen.' },
-    { condition: 'Lumbar Disc Herniation', diagnosisDate: '2024-11-05', status: 'Improving', treatingDoctor: 'Dr. Emily Rodriguez', hospital: 'Spine & Orthopedic Center', medications: 'Ibuprofen 400mg as needed, Cyclobenzaprine 10mg at night', surgeries: 'Microdiscectomy L4-L5 (Jan 2025)', allergies: '', familyHistory: 'No relevant family history', notes: 'Post-surgery recovery going well. Physical therapy 3x per week. Pain reduced from 8/10 to 3/10.' },
+    { condition: 'Type 2 Diabetes', diagnosisDate: '2023-03-15', status: 'Managed', treatingDoctor: 'Dr. Sarah Johnson', hospital: 'City General Hospital', medications: 'Metformin 500mg twice daily', surgeries: 'None reported', allergies: 'Penicillin, Sulfa drugs', familyHistory: 'Father had Type 2 Diabetes, Mother had hypertension', notes: 'A1C levels trending down from 8.2 to 7.1 over past year. Regular exercise and diet modifications.' },
+    { condition: 'Hypertension', diagnosisDate: '2022-08-20', status: 'Controlled', treatingDoctor: 'Dr. Michael Chen', hospital: 'Heart Care Clinic', medications: 'Lisinopril 10mg daily, Amlodipine 5mg daily', surgeries: 'None reported', allergies: 'Penicillin', familyHistory: 'Mother had hypertension, Maternal grandmother had stroke', notes: 'Blood pressure consistently around 128/82 on current medication regimen.' },
+    { condition: 'Lumbar Disc Herniation', diagnosisDate: '2024-11-05', status: 'Improving', treatingDoctor: 'Dr. Emily Rodriguez', hospital: 'Spine & Orthopedic Center', medications: 'Ibuprofen 400mg as needed, Cyclobenzaprine 10mg at night', surgeries: 'Microdiscectomy L4-L5 (Jan 2025)', allergies: 'None reported', familyHistory: 'No relevant family history', notes: 'Post-surgery recovery going well. Physical therapy 3x per week. Pain reduced from 8/10 to 3/10.' },
   ];
 
   const filteredRecords = records.filter(record =>
@@ -452,7 +452,7 @@ export default function MedicalHistory() {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setFormData({ ...sample })}
+                    onClick={() => setFormData({ ...formData, ...sample })}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
                   >
                     {sample.condition}

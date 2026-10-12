@@ -42,8 +42,8 @@ export default function Medications() {
   const fetchMedications = async (p = 1) => {
     try {
       const response = await api.get('/medications', { params: { page: p, limit: LIMIT } });
-      setMedications(response.data.data || response.data);
-      if (response.data.pagination) setPagination(response.data.pagination);
+      setMedications(Array.isArray(response.data?.data) ? response.data.data : Array.isArray(response.data) ? response.data : []);
+      if (response.data?.pagination) setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching medications:', error);
     } finally {
@@ -159,9 +159,9 @@ export default function Medications() {
   };
 
   const sampleMedications = [
-    { name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', timeOfDay: 'Morning with food', startDate: '2025-01-15', purpose: 'High blood pressure management', sideEffects: 'Dizziness, dry cough', notes: 'Also taking Metformin and Aspirin - check interactions', isActive: true },
-    { name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', timeOfDay: 'Morning and evening with meals', startDate: '2024-06-01', purpose: 'Type 2 diabetes management', sideEffects: 'Nausea, stomach upset', notes: 'Monitor blood sugar levels regularly', isActive: true },
-    { name: 'Aspirin', dosage: '81mg', frequency: 'Once daily', timeOfDay: 'Morning', startDate: '2025-03-10', purpose: 'Heart attack and stroke prevention', sideEffects: 'Stomach irritation, easy bruising', notes: 'Low-dose aspirin therapy', isActive: true },
+    { name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', timeOfDay: 'Morning with food', startDate: '2025-01-15', endDate: '2027-01-15', purpose: 'High blood pressure management', sideEffects: 'Dizziness, dry cough', notes: 'Also taking Metformin and Aspirin - check interactions', isActive: true },
+    { name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', timeOfDay: 'Morning and evening with meals', startDate: '2024-06-01', endDate: '2027-06-01', purpose: 'Type 2 diabetes management', sideEffects: 'Nausea, stomach upset', notes: 'Monitor blood sugar levels regularly', isActive: true },
+    { name: 'Aspirin', dosage: '81mg', frequency: 'Once daily', timeOfDay: 'Morning', startDate: '2025-03-10', endDate: '2027-03-10', purpose: 'Heart attack and stroke prevention', sideEffects: 'Stomach irritation, easy bruising', notes: 'Low-dose aspirin therapy', isActive: true },
   ];
 
   const filteredMedications = medications.filter(med =>
@@ -390,7 +390,7 @@ export default function Medications() {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setFormData({ ...sample })}
+                    onClick={() => setFormData({ ...formData, ...sample, endDate: sample.endDate })}
                     className="text-xs px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
                   >
                     {sample.name}
@@ -468,6 +468,7 @@ export default function Medications() {
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
               />
+              <p className="text-xs text-gray-500 mt-1">Examples describe ongoing medication with no planned end date. Enter a real end date if known.</p>
             </div>
           </div>
           <div>
